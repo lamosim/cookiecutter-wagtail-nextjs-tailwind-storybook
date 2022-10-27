@@ -7,7 +7,7 @@ volumes:
 services:
   django:{% if cookiecutter.use_celery == 'y' %} &django{% endif %}
     build:
-      context: .
+      context: ./packages/backend
       dockerfile: ./compose/local/django/Dockerfile
     image: {{ cookiecutter.project_slug }}_local_django
     container_name: {{ cookiecutter.project_slug }}_local_django
@@ -32,14 +32,14 @@ services:
   postgres:
     build:
       context: .
-      dockerfile: ./compose/production/postgres/Dockerfile
+      dockerfile: packages/backend/compose/production/postgres/Dockerfile
     image: {{ cookiecutter.project_slug }}_production_postgres
     container_name: {{ cookiecutter.project_slug }}_local_postgres
     volumes:
       - {{ cookiecutter.project_slug }}_local_postgres_data:/var/lib/postgresql/data:Z
       - {{ cookiecutter.project_slug }}_local_postgres_data_backups:/backups:z
     env_file:
-      - ./.envs/.local/.postgres
+      - packages/backend/.envs/.local/.postgres
 
   docs:
     image: {{ cookiecutter.project_slug }}_local_docs
@@ -47,9 +47,9 @@ services:
     platform: linux/x86_64
     build:
       context: .
-      dockerfile: ./compose/local/docs/Dockerfile
+      dockerfile: packages/backend/compose/local/docs/Dockerfile
     env_file:
-      - ./.envs/.local/.django
+      - packages/backend/.envs/.local/.django
     volumes:
       - ./docs:/docs:z
       - ./config:/app/config:z
@@ -112,7 +112,7 @@ services:
   node:
     build:
       context: .
-      dockerfile: ./compose/local/node/Dockerfile
+      dockerfile: packages/backend/compose/local/node/Dockerfile
     image: {{ cookiecutter.project_slug }}_local_node
     container_name: {{ cookiecutter.project_slug }}_local_node
     depends_on:
@@ -128,3 +128,31 @@ services:
       - "3001:3001"
 
   {%- endif %}
+
+  nextjs:
+    ports:
+      - "4000:4000"
+    image: {{ cookiecutter.project_slug }}_local_frontend
+    container_name: {{ cookiecutter.project_slug }}_local_frontend
+    build:
+      context: ./packages/frontend
+      dockerfile: ./compose/local/nextjs/Dockerfile
+    volumes:
+      - ./packages/frontend:/usr/src/app
+      - /usr/src/app/node_modules
+      - /usr/src/app/.frontend
+    env_file:
+      - ./packages/frontend/.envs/.local/.nextjs
+
+  storybook:
+    ports:
+      - "6006:6006"
+    image: { { cookiecutter.project_slug } }_local_storybook
+    container_name: { { cookiecutter.project_slug } }_local_storybook
+    build:
+      context: ./packages/frontend
+      dockerfile: ./compose/local/storybook/Dockerfile
+    volumes:
+      - ./packages/frontend:/usr/src/app
+      - /usr/src/app/node_modules
+      - /usr/src/app/.storybook
